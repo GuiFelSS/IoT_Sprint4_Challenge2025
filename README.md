@@ -80,7 +80,7 @@ O circuito IoT foi simulado na plataforma Wokwi e é composto pelos seguintes co
 2. Instale as dependências do Node.js: `npm install`
 3. **Confirme a URL da API:** Verifique se o arquivo `mottu-dashboard/src/services/api.js` está apontando para o seu backend Python (ex: `baseURL: 'http://localhost:5000'`).
 4. Inicie o dashboard web (use `-c` para limpar o cache se necessário): `npm run web`
-5. Acesse o dashboard no endereço fornecido pelo Expo (geralmente `http://localhost:8080` ou `http://localhost:19006`).
+5. Acesse o dashboard no endereço fornecido pelo Expo (`http://localhost:8081`).
 
 ## ESTRUTURA DO PROJETO
 ```
@@ -107,3 +107,13 @@ projeto_mottu/
 ├── Leitura_Placas.ipynb
 └── modelo_da_entrega2_Challenge2025.ipynb
 ```
+## IMAGENS
+### DISPOSITIVO IoT  
+<div align="center">
+  <img src="/imags/Captura de tela 2025-10-01 210249.png" alt="DISPOSITIVO IoT"/>
+</div>
+
+### Dashboard
+<div align="center">
+  <img src="/imags/Captura de tela 2025-11-10 163536.png" alt="DISPOSITIVO IoT"/>
+</div>
