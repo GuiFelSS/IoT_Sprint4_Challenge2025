@@ -17,17 +17,20 @@ O sistema simula um ambiente de pátio onde vagas de estacionamento são equipad
 
 - **IDENTIFICAÇÃO DE MODELO (Simulado):** Uma função (`ml_models.py`) simula um modelo de Deep Learning, mapeando o ID do IoT recebido para um tipo de moto (ex: Mottu-E, Mottu-Pop).
 
+- **ANÁLISE DE STATUS (Simulado):** Uma função (`ml_models.py`) simula aleatoriamente um status para a moto (ex: "Pronta para uso", "Em manutenção"), que é exibido com destaque no dashboard.
+
 - **DASHBOARD INTERATIVO:** Uma aplicação web desenvolvida com **React Native (Expo)** e **TypeScript** exibe o status de cada vaga, consumindo os dados da API Flask e atualizando-se automaticamente.
 
 - **PERSISTÊNCIA DE DADOS:** Todas as informações das vagas (status, ID da moto, placa e modelo simulados) são armazenadas em um banco de dados **SQLite** (`patio.db`) pelo backend.
 
 ## ARQUITETURA E COMPONENTES
 ### HARDWARE (Simulação no Wokwi)
-(Esta seção permanece igual)
-- **MICROCONTROLADOR (ESP32):** O cérebro da operação...
-- **SENSORES ULTRASSÔNICO:** Utilizado para medir a distância...
-- **POTENCIÔMETRO DESLIZANTE:** Simula a identificação de diferentes motos...
-- **BUZZER:** Fornece feedback sonoro...
+O circuito IoT foi simulado na plataforma Wokwi e é composto pelos seguintes componentes:
+- **MICROCONTROLADOR (ESP32):** O cérebro da operação, responsável por ler os sensores, processar os dados e comunicar-se via WI-FI.
+- **SENSOR ULTRASSÔNICO (HC-SR04):** Utilizado para medir a distância e detectar se a vaga está "livre" ou "ocupada" com base em um limiar pré-definido.
+- **POTENCIÔMETRO DESLIZANTE:** Simula a identificação de diferentes motos. O valor lido do potenciômetro é mapeado para um dos três tipos de moto (MOTTU-E, MOTTU-POP, MOTTU-SPORT).
+- **LEDS (VERDE/VERMELHO):** Indicadores visuais locais para o status da vaga (Livre/Ocupada).
+- **BUZZER:** Fornece feedback sonoro, sendo ativado quando uma mensagem é recebida no tópico de comando MQTT, funcionando como um sistema de alerta.
 
 ### SOFTWARE E COMUNICAÇÃO
 1. **DISPOSITIVO IOT:** O sensor ultrassônico no ESP32 mede a distância e publica uma mensagem JSON no tópico MQTT `mottu/patio/{id_vaga}/status`.
@@ -68,5 +71,39 @@ O sistema simula um ambiente de pátio onde vagas de estacionamento são equipad
 `python -m venv venv source venv/bin/activate # No Windows: venv\Scripts\activate`
 3. Instale as dependências:  
 `pip install flask paho-mqtt requests flask-cors`
-5. Inicie o servidor API (ele criará e inicializará o `patio.db` automaticamente):  
-`pip install flask paho-mqtt requests flask-cors`
+4. Inicie o servidor API (ele criará e inicializará o `patio.db` automaticamente):  
+`python main.py`
+5. O backend estará rodando e ouvindo MQTT. A API estará acessível em `http://localhost:5000`.
+
+### 3. Frontend (Dashboard Expo)
+1. Em um **novo terminal**, navegue até a pasta `mottu-dashboard`.
+2. Instale as dependências do Node.js: `npm install`
+3. **Confirme a URL da API:** Verifique se o arquivo `mottu-dashboard/src/services/api.js` está apontando para o seu backend Python (ex: `baseURL: 'http://localhost:5000'`).
+4. Inicie o dashboard web (use `-c` para limpar o cache se necessário): `npm run web`
+5. Acesse o dashboard no endereço fornecido pelo Expo (geralmente `http://localhost:8080` ou `http://localhost:19006`).
+
+## ESTRUTURA DO PROJETO
+```
+projeto_mottu/
+├── Simulador_IOT/
+│   ├── src/sketch.ino
+│   └── diagram.json
+├── backend_ML_IOT_PYTHON/
+│   ├── main.py                 # API Flask e cliente MQTT
+│   ├── ml_models.py            # Funções de simulação dos modelos de ML
+│   └── patio.db                # Banco de dados SQLite
+├── mottu-dashboard/            # <-- NOVO FRONTEND
+│   ├── src/
+│   │   ├── screens/
+│   │   │   └── DashboardScreen.tsx
+│   │   ├── services/
+│   │   │   ├── api.js
+│   │   │   └── patioService.ts
+│   │   └── types/
+│   │       └── index.ts
+│   ├── App.tsx
+│   ├── package.json
+│   └── index.ts
+├── Leitura_Placas.ipynb
+└── modelo_da_entrega2_Challenge2025.ipynb
+```
