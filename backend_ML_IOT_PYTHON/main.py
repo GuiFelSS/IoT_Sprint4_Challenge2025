@@ -7,8 +7,10 @@ from datetime import datetime
 import requests
 from flask_cors import CORS
 
-from ml_models import identificar_tipo_moto, reconhecer_placa
+# Importa nossas funções de "Machine Learning"
+from ml_models import identificar_tipo_moto, reconhecer_placa, identificar_status_moto
 
+# --- Configurações ---
 MQTT_BROKER = "broker.mqtt-dashboard.com"
 MQTT_PORT = 1883
 MQTT_TOPIC = "mottu/patio/+/status"
@@ -16,9 +18,11 @@ DATABASE_FILE = "patio.db"
 URL_JAVA_API_ENTRADA = "http://localhost:8080/api/patio/entrada"
 URL_JAVA_API_SAIDA = "http://localhost:8080/api/patio/saida"
 
+# --- Banco de Dados ---
 def init_db():
     conn = sqlite3.connect(DATABASE_FILE)
     cursor = conn.cursor()
+    # Cria a tabela se ela não existir
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS vagas (
             id_vaga TEXT PRIMARY KEY,
@@ -26,6 +30,7 @@ def init_db():
             moto_id TEXT,
             tipo_moto_ml TEXT,
             placa_ml TEXT,
+            status_moto_ml TEXT,
             ultimo_update TEXT NOT NULL
         )
     ''')
@@ -33,11 +38,12 @@ def init_db():
     conn.close()
 
 
+# --- Cliente MQTT ---
 def on_message(client, userdata, message):
     try:
         topic_parts = message.topic.split('/')
-        vaga_id_num = topic_parts[2]
-        vaga_id_str = f"VAGA_{vaga_id_num}"
+        vaga_id_num = topic_parts[2]  # Ex: "1"
+        vaga_id_str = f"VAGA_{vaga_id_num}"  # Ex: "VAGA_1"
 
         payload_json = json.loads(message.payload.decode("utf-8"))
         status = payload_json.get("status_ocupacao")
@@ -47,15 +53,22 @@ def on_message(client, userdata, message):
 
         tipo_moto_ml = None
         placa_ml = None
+        status_moto_ml = None
 
         if status == "ocupada":
             print(f"  Vaga OCUPADA pela moto IoT ID: {moto_id}.")
 
+            # --- CHAMADA REAL DO ML ---
             placa_ml = reconhecer_placa("caminho/falso/imagem.png")
             tipo_moto_ml = identificar_tipo_moto(moto_id)
+            status_moto_ml = identificar_status_moto()
+
             print(f"  [ML] Tipo de Moto: {tipo_moto_ml}")
             print(f"  [ML] Placa: {placa_ml}")
+            print(f"  [ML] Status: {status_moto_ml}")
+            # ---------------------------
 
+            # --- Notificar API Java (Entrada) ---
             try:
                 dados_para_java = {
                     "placa": placa_ml,
@@ -67,9 +80,10 @@ def on_message(client, userdata, message):
             except Exception as e:
                 print(f"  AVISO: Não foi possível conectar à API Java: {e}")
 
-        else:
+        else:  # status == "livre"
             print(f"  Vaga LIVRE.")
 
+            # --- Notificar API Java (Saída) ---
             try:
                 url_saida_java = f"{URL_JAVA_API_SAIDA}/{vaga_id_str}"
                 print(f"  Enviando SAÍDA para API Java: {url_saida_java}")
@@ -77,22 +91,24 @@ def on_message(client, userdata, message):
             except Exception as e:
                 print(f"  AVISO: Não foi possível conectar à API Java: {e}")
 
+        # --- Salvar no DB local ---
         conn = sqlite3.connect(DATABASE_FILE)
         cursor = conn.cursor()
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         cursor.execute('''
-            REPLACE INTO vagas (id_vaga, status, moto_id, tipo_moto_ml, placa_ml, ultimo_update)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (vaga_id_str, status, moto_id, tipo_moto_ml, placa_ml, timestamp))
+            REPLACE INTO vagas (id_vaga, status, moto_id, tipo_moto_ml, placa_ml, status_moto_ml, ultimo_update)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (vaga_id_str, status, moto_id, tipo_moto_ml, placa_ml, status_moto_ml, timestamp))
 
         conn.commit()
         conn.close()
-        print(f"  Dados da vaga {vaga_id_str} salvos no banco de dados local (Sprint 3).")
+        print(f"  Dados da vaga {vaga_id_str} salvos no banco de dados local.")
         print("--------------------------------\n")
 
     except Exception as e:
         print(f"Erro ao processar mensagem: {e}")
+
 
 mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
 mqtt_client.on_message = on_message
@@ -100,12 +116,14 @@ mqtt_client.connect(MQTT_BROKER, MQTT_PORT, 60)
 thread = threading.Thread(target=mqtt_client.loop_forever)
 thread.start()
 
+# --- Servidor Flask ---
 app = Flask(__name__)
 CORS(app)
 
 @app.route('/')
 def index():
     return jsonify({"status": "API_MOTTU_PYTHON_ONLINE"})
+
 
 @app.route('/status_patio')
 def get_status_patio():
@@ -116,6 +134,7 @@ def get_status_patio():
     vagas = [dict(row) for row in cursor.fetchall()]
     conn.close()
     return jsonify(vagas)
+
 
 if __name__ == '__main__':
     init_db()

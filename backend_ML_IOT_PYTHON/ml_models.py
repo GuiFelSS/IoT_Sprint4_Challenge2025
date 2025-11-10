@@ -1,7 +1,7 @@
+import random
 def identificar_tipo_moto(moto_id_iot):
     """
     Simula o modelo de ML mapeando o ID do IoT para o tipo da moto.
-    Garante consistência entre o sensor IoT e a "visão computacional".
     """
     if moto_id_iot == "MOTTU-E":
         return "Mottu-E"
@@ -14,3 +14,7 @@ def identificar_tipo_moto(moto_id_iot):
 
 def reconhecer_placa(caminho_imagem):
     return "RFA4I58"
+
+def identificar_status_moto():
+    status_possiveis = ["Pronta para uso", "Em manutenção", "Aguardando manutenção"]
+    return random.choice(status_possiveis)
